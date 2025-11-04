@@ -5,7 +5,7 @@ import { PrismaService } from '../database/prisma.service';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() { return this.prisma.user.findMany(); }
+  findAll() { return this.prisma.user.findMany({orderBy: { id: "asc" }}); }
   findOne(id: number) { return this.prisma.user.findUnique({ where: { id } }); }
   create(data: any) { return this.prisma.user.create({ data }); }
   update(id: number, data: any) { return this.prisma.user.update({ where: { id }, data }); }

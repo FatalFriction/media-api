@@ -1,6 +1,7 @@
 // Category.controller.ts
 import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
 import { CategoryService } from './category.service';
+import { CreateCategoryDto } from './Dto/CreateCategory.dto';
 
 @Controller('Category')
 export class CategoryController {
@@ -17,8 +18,8 @@ export class CategoryController {
   }
 
   @Post()
-  create(@Body() data: { name: string }) {
-    return this.CategoryService.create(data);
+  create(@Body() dto: CreateCategoryDto) {
+    return this.CategoryService.create(dto);
   }
 
   @Patch(':id')

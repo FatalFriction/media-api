@@ -1,6 +1,7 @@
 // media.controller.ts
 import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
 import { MediaService } from './media.service';
+import { CreateMediaDto } from './Dto/CreateMedia.dto';
 
 @Controller('media')
 export class MediaController {
@@ -17,8 +18,8 @@ export class MediaController {
   }
 
   @Post()
-  create(@Body() data: { url: string; type: string; contentId?: number }) {
-    return this.mediaService.create(data);
+  create(@Body() dto: CreateMediaDto) {
+    return this.mediaService.create(dto);
   }
 
   @Patch(':id')

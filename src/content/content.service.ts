@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 export class ContentsService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() { return this.prisma.content.findMany({ include: { user: true, media: true, category: true } }); }
+  findAll() { return this.prisma.content.findMany({ orderBy: { id: "asc" } ,include: { user: true, media: true, category: true } }); }
   create(data: { title: string; slug: string; body: string; userId: number; categoryId?: number }) {
     return this.prisma.content.create({ data });
   }

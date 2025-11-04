@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 export class MediaService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() { return this.prisma.media.findMany(); }
+  findAll() { return this.prisma.media.findMany({orderBy: { id: "asc" }}); }
   create(data: { url: string; type: string; contentId?: number }) {
     return this.prisma.media.create({ data });
   }

@@ -1,6 +1,7 @@
 // contents.controller.ts
 import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
 import { ContentsService } from './content.service';
+import { CreateContentDto } from './Dto/CreateContent.dto';
 
 @Controller('contents')
 export class ContentsController {
@@ -17,8 +18,8 @@ export class ContentsController {
   }
 
   @Post()
-  create(@Body() data: { title: string; slug: string; body: string; userId: number; categoryId?: number }) {
-    return this.contentsService.create(data);
+  create(@Body() dto: CreateContentDto) {
+    return this.contentsService.create(dto);
   }
 
   @Patch(':id')

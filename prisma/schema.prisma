@@ -22,6 +22,8 @@ model User {
   role      String   @default("user")
   contents  Content[]
   createdAt DateTime @default(now())
+
+  @@index([id])
 }
 
 model Content {
@@ -36,6 +38,8 @@ model Content {
   category    Category? @relation(fields: [categoryId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([id])
 }
 
 model Media {
@@ -45,10 +49,14 @@ model Media {
   contentId Int?
   content   Content? @relation(fields: [contentId], references: [id])
   createdAt DateTime @default(now())
+
+  @@index([id])
 }
 
 model Category {
   id        Int      @id @default(autoincrement())
   name      String   @unique
   contents  Content[]
+
+  @@index([id])
 }
