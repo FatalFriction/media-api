@@ -3,6 +3,8 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
+let cachedServer: any;
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
@@ -21,4 +23,20 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+
+export default async function handler(req: any, res: any) {
+  if (!cachedServer) {
+    const app = await NestFactory.create(AppModule);
+    app.enableCors();
+    await app.init();
+    cachedServer = app.getHttpAdapter().getInstance();
+  }
+  return cachedServer(req, res);
+}
+
+if (process.env.NODE_ENV !== 'production') {
+  NestFactory.create(AppModule).then(app => {
+    app.enableCors();
+    app.listen(3000);
+  });
+}
