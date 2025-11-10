@@ -1,24 +1,36 @@
-// src/media/media.service.ts
 import {
   Injectable,
   NotFoundException,
   InternalServerErrorException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { UploadMediaDto } from 'src/media/Dto/UploadMedia.dto';
 import { UpdateMediaDto } from 'src/media/Dto/UpdateMedia.dto';
-import * as fs from 'fs';
-import * as path from 'path';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 @Injectable()
-export class MediaService {
-  private readonly uploadPath = path.join(process.cwd(), 'uploads');
+export class MediaService implements OnModuleInit {
+  private r2: S3Client;
+  private readonly bucketName = process.env.R2_BUCKET_NAME || 'porto-bucket';
+  private readonly publicUrl = process.env.R2_PUBLIC_URL; // contoh: https://pub-xxxxxx.r2.dev
 
-  constructor(private prisma: PrismaService) {
-    // Buat folder uploads kalau belum ada
-    if (!fs.existsSync(this.uploadPath)) {
-      fs.mkdirSync(this.uploadPath, { recursive: true });
+  constructor(private readonly prisma: PrismaService) {}
+
+  onModuleInit() {
+    // Inisialisasi R2 Client sekali saat app start
+    if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY || !process.env.R2_SECRET_KEY) {
+      throw new Error('R2 credentials tidak lengkap! Cek .env');
     }
+
+    this.r2 = new S3Client({
+      region: 'auto',
+      endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY!,
+        secretAccessKey: process.env.R2_SECRET_KEY!,
+      },
+    });
   }
 
   // 1. LIHAT SEMUA MEDIA
@@ -43,22 +55,32 @@ export class MediaService {
     return media;
   }
 
-  // 3. UPLOAD FILE (INI YANG DIPAKAI!)
+  // 3. UPLOAD KE R2 + SIMPAN URL KE DB
   async upload(file: Express.Multer.File, dto: UploadMediaDto) {
     if (!file) {
       throw new InternalServerErrorException('File wajib diupload');
     }
 
     const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`;
-    const filePath = path.join(this.uploadPath, filename);
+    const key = `media/${filename}`;
 
     try {
-      fs.writeFileSync(filePath, file.buffer);
+      // Upload ke R2
+      await this.r2.send(
+        new PutObjectCommand({
+          Bucket: this.bucketName,
+          Key: key,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+          // ACL: 'public-read', // otomatis public kalau bucket public
+        }),
+      );
     } catch (error) {
-      throw new InternalServerErrorException('Gagal menyimpan file ke server');
+      console.error('R2 Upload Error:', error);
+      throw new InternalServerErrorException('Gagal upload ke Cloudflare R2');
     }
 
-    const url = `/uploads/${filename}`;
+    const url = `${this.publicUrl}/${key}`;
 
     return this.prisma.media.create({
       data: {
@@ -70,7 +92,7 @@ export class MediaService {
     });
   }
 
-  // 4. UPDATE MEDIA
+  // 4. UPDATE MEDIA (hanya metadata)
   async update(id: number, dto: UpdateMediaDto) {
     const media = await this.prisma.media.findUnique({ where: { id } });
     if (!media) {
@@ -84,31 +106,34 @@ export class MediaService {
     });
   }
 
-  // 5. HAPUS MEDIA DARI DISK
+  // 5. HAPUS DARI R2 + DB
   async remove(id: number) {
     const media = await this.prisma.media.findUnique({ where: { id } });
     if (!media) {
       throw new NotFoundException(`Media dengan ID ${id} tidak ditemukan`);
     }
 
-    // Hapus file dari folder uploads
+    // Hapus dari R2
     if (media.url) {
-      const filePath = path.join(process.cwd(), media.url);
-      if (fs.existsSync(filePath)) {
-        try {
-          fs.unlinkSync(filePath);
-        } catch (error) {
-          console.warn(`Gagal hapus file: ${filePath}`);
-          // Tidak throw error, biar tetap bisa hapus dari DB
-        }
+      const key = media.url.replace(`${this.publicUrl}/`, '');
+      try {
+        await this.r2.send(
+          new DeleteObjectCommand({
+            Bucket: this.bucketName,
+            Key: key,
+          }),
+        );
+      } catch (error) {
+        console.warn(`Gagal hapus dari R2: ${key}`, error);
+        // Tetap lanjut hapus dari DB
       }
     }
 
     await this.prisma.media.delete({ where: { id } });
 
     return {
-      message: `Media dengan ID ${id} berhasil dihapus`,
-      deletedFile: media.url,
+      message: `Media dengan ID ${id} berhasil dihapus dari R2 & database`,
+      deletedUrl: media.url,
     };
   }
 }

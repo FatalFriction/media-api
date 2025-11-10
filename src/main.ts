@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,7 +12,7 @@ async function bootstrap() {
     .setTitle('Media API')
     .setDescription('CRUD + Auth')
     .setVersion('1.0')
-    .addBearerAuth()
+    .addBearerAuth() 
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
