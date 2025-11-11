@@ -13,13 +13,13 @@ type SafeCategory = Pick<Category, 'id' | 'name' >;
 export class CategoryService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll({ page = 1, limit = 10 }: PaginationQueryDto): Promise<PaginationResult<SafeCategory>> {
-    const skip = (page - 1) * limit;
+  async findAll({ currentPage = 1, pageSize = 10 }: PaginationQueryDto): Promise<PaginationResult<SafeCategory>> {
+    const skip = (currentPage - 1) * pageSize;
 
     const [data, total] = await Promise.all([
     this.prisma.category.findMany({
       skip,
-      take: limit,
+      take: pageSize,
       orderBy: { id: 'asc' },
       include: { contents: true },
     }),
@@ -27,7 +27,7 @@ export class CategoryService {
     ]);
     return {
       data,
-      meta: getPaginationMeta(total, page, limit),
+      meta: getPaginationMeta(total, currentPage, pageSize),
     };
   }
 

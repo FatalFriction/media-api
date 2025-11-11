@@ -40,13 +40,13 @@ export class MediaService implements OnModuleInit {
   }
 
   // 1. LIHAT SEMUA MEDIA
-  async findAll({ page = 1, limit = 10 }: PaginationQueryDto): Promise<PaginationResult<SafeMedia>> {
-    const skip = (page - 1) * limit;
+  async findAll({ currentPage = 1, pageSize = 10 }: PaginationQueryDto): Promise<PaginationResult<SafeMedia>> {
+    const skip = (currentPage - 1) * pageSize;
 
     const [data, total] = await Promise.all([
       this.prisma.media.findMany({
         skip,
-        take: limit,
+        take: pageSize,
         orderBy: { createdAt: 'desc' },
         include: { content: true },
       }),
@@ -55,7 +55,7 @@ export class MediaService implements OnModuleInit {
 
     return {
       data,
-      meta: getPaginationMeta(total, page, limit),
+      meta: getPaginationMeta(total, currentPage, pageSize),
     };
   }
 

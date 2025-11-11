@@ -26,15 +26,15 @@ export class ContentsService {
   constructor(private prisma: PrismaService) {}
 
   async findAll({
-    page = 1,
-    limit = 10,
+    currentPage = 1,
+    pageSize = 10,
   }: PaginationQueryDto): Promise<PaginationResult<ContentEntity>> {
-    const skip = (page - 1) * limit;
+    const skip = (currentPage - 1) * pageSize;
 
     const [contents, total] = await Promise.all([
       this.prisma.content.findMany({
         skip,
-        take: limit,
+        take: pageSize,
         orderBy: { createdAt: 'desc' },
         include: {
           user: {
@@ -65,7 +65,7 @@ export class ContentsService {
 
     return {
       data,
-      meta: getPaginationMeta(total, page, limit),
+      meta: getPaginationMeta(total, currentPage, pageSize),
     };
   }
 

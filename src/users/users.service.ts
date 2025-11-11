@@ -14,13 +14,13 @@ export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(paginationQuery: PaginationQueryDto): Promise<PaginationResult<SafeUser>> {
-    const { page, limit } = paginationQuery;
-    const skip = (page - 1) * limit;
+    const { currentPage, pageSize } = paginationQuery;
+    const skip = (currentPage - 1) * pageSize;
 
     const [data, total] = await Promise.all([
       this.prisma.user.findMany({
         skip,
-        take: limit,
+        take: pageSize,
         orderBy: { id: 'asc' },
         select: {
           id: true,
@@ -37,11 +37,11 @@ export class UsersService {
       data,
       meta: {
         total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-        hasNextPage: page * limit < total,
-        hasPrevPage: page > 1,
+        currentPage,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+        hasNextPage: currentPage * pageSize < total,
+        hasPrevPage: currentPage > 1,
       },
     };
   }
