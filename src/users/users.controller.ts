@@ -1,8 +1,11 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, Query } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUsersDto } from './Dto/CreateUsers.dto';
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { UserEntity } from '../users/Entities/Users.entities';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { User } from '@prisma/client';
+import { PaginationResult } from 'src/common/types/paginationResultType';
 
 @Controller('users')
 @ApiTags('users')
@@ -11,8 +14,8 @@ export class UsersController {
 
   @Get()
   @ApiOkResponse({type: UserEntity})
-  findAll() {
-    return this.usersService.findAll();
+  async findAll(@Query() paginationQuery: PaginationQueryDto): Promise<PaginationResult<Pick<User, 'id' | 'name' | 'email' | 'role' | 'createdAt'>>> {
+    return this.usersService.findAll(paginationQuery);
   }
 
   @Get(':id')

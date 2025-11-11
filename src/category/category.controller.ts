@@ -1,9 +1,10 @@
 // Category.controller.ts
-import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, Query } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './Dto/CreateCategory.dto';
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { CategoryEntity } from '../category/Entities/Category.entities';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 
 @Controller('Category')
 @ApiTags('Category')
@@ -12,8 +13,8 @@ export class CategoryController {
 
   @Get()
   @ApiOkResponse({type: CategoryEntity})
-  findAll() {
-    return this.CategoryService.findAll();
+  findAll(@Query() pagination: PaginationQueryDto) {
+    return this.CategoryService.findAll(pagination);
   }
 
   @Get(':id')

@@ -8,6 +8,12 @@ import { PrismaService } from '../database/prisma.service';
 import { UploadMediaDto } from 'src/media/Dto/UploadMedia.dto';
 import { UpdateMediaDto } from 'src/media/Dto/UpdateMedia.dto';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { Media } from '@prisma/client';
+import { PaginationResult } from 'src/common/types/paginationResultType';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { getPaginationMeta } from 'src/utils/pagination';
+
+type SafeMedia = Pick<Media, 'id' | 'url' | 'type' | 'contentId' |'createdAt'>;
 
 @Injectable()
 export class MediaService implements OnModuleInit {
@@ -34,11 +40,23 @@ export class MediaService implements OnModuleInit {
   }
 
   // 1. LIHAT SEMUA MEDIA
-  async findAll() {
-    return this.prisma.media.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: { content: true },
-    });
+  async findAll({ currentPage = 1, pageSize = 10 }: PaginationQueryDto): Promise<PaginationResult<SafeMedia>> {
+    const skip = (currentPage - 1) * pageSize;
+
+    const [data, total] = await Promise.all([
+      this.prisma.media.findMany({
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+        include: { content: true },
+      }),
+      this.prisma.media.count(),
+    ]);
+
+    return {
+      data,
+      meta: getPaginationMeta(total, currentPage, pageSize),
+    };
   }
 
   // 2. LIHAT SATU MEDIA
