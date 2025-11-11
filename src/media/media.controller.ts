@@ -9,6 +9,7 @@ import {
   UploadedFile,
   Body,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { MediaService } from './media.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -17,6 +18,7 @@ import { UpdateMediaDto } from 'src/media/Dto/UpdateMedia.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
 import { MediaEntity } from '../media/Entities/Media.entities';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 
 @Controller('media')
 @ApiTags('media')
@@ -27,8 +29,8 @@ export class MediaController {
   // 1. LIHAT SEMUA MEDIA
   @Get()
   @ApiOkResponse({ type: [MediaEntity] })
-  findAll() {
-    return this.mediaService.findAll();
+  findAll(@Query() pagination: PaginationQueryDto) {
+    return this.mediaService.findAll(pagination);
   }
 
   // 2. LIHAT SATU MEDIA

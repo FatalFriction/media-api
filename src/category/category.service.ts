@@ -1,18 +1,34 @@
-// category.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCategoryDto } from '../category/Dto/CreateCategory.dto';
 import { UpdateCategoryDto } from '../category/Dto/UpdateCategory.dto';
+import { Category } from '@prisma/client';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { PaginationResult } from 'src/common/types/paginationResultType';
+import { getPaginationMeta } from 'src/utils/pagination';
+
+type SafeCategory = Pick<Category, 'id' | 'name' >;
 
 @Injectable()
 export class CategoryService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
-    return this.prisma.category.findMany({
+  async findAll({ currentPage = 1, pageSize = 10 }: PaginationQueryDto): Promise<PaginationResult<SafeCategory>> {
+    const skip = (currentPage - 1) * pageSize;
+
+    const [data, total] = await Promise.all([
+    this.prisma.category.findMany({
+      skip,
+      take: pageSize,
       orderBy: { id: 'asc' },
       include: { contents: true },
-    });
+    }),
+      this.prisma.category.count(),
+    ]);
+    return {
+      data,
+      meta: getPaginationMeta(total, currentPage, pageSize),
+    };
   }
 
   async findOne(id: number) {
