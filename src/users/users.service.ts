@@ -2,23 +2,48 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateUsersDto } from '../users/Dto/CreateUsers.dto';
 import { UpdateUsersDto } from '../users/Dto/UpdateUsers.dto';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import * as bcrypt from 'bcrypt';
+import { PaginationResult } from 'src/common/types/paginationResultType';
+import { User } from '@prisma/client';
+
+type SafeUser = Pick<User, 'id' | 'name' | 'email' | 'role' | 'createdAt'>;
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
-    return this.prisma.user.findMany({
-      orderBy: { id: 'asc' },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
+  async findAll(paginationQuery: PaginationQueryDto): Promise<PaginationResult<SafeUser>> {
+    const { page, limit } = paginationQuery;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.user.findMany({
+        skip,
+        take: limit,
+        orderBy: { id: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.user.count(),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+        hasPrevPage: page > 1,
       },
-    });
+    };
   }
 
   async findOne(id: number) {
