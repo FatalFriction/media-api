@@ -35,7 +35,7 @@ export class ContentsService {
       this.prisma.content.findMany({
         skip,
         take: pageSize,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: 'asc' },
         include: {
           user: {
             select: {

@@ -7,13 +7,17 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { UploadMediaDto } from 'src/media/Dto/UploadMedia.dto';
 import { UpdateMediaDto } from 'src/media/Dto/UpdateMedia.dto';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { Media } from '@prisma/client';
 import { PaginationResult } from 'src/common/types/paginationResultType';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { getPaginationMeta } from 'src/utils/pagination';
 
-type SafeMedia = Pick<Media, 'id' | 'url' | 'type' | 'contentId' |'createdAt'>;
+type SafeMedia = Pick<Media, 'id' | 'url' | 'type' | 'contentId' | 'createdAt'>;
 
 @Injectable()
 export class MediaService implements OnModuleInit {
@@ -25,7 +29,11 @@ export class MediaService implements OnModuleInit {
 
   onModuleInit() {
     // Inisialisasi R2 Client sekali saat app start
-    if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY || !process.env.R2_SECRET_KEY) {
+    if (
+      !process.env.R2_ACCOUNT_ID ||
+      !process.env.R2_ACCESS_KEY ||
+      !process.env.R2_SECRET_KEY
+    ) {
       throw new Error('R2 credentials tidak lengkap! Cek .env');
     }
 
@@ -40,19 +48,27 @@ export class MediaService implements OnModuleInit {
   }
 
   // 1. LIHAT SEMUA MEDIA
-  async findAll({ currentPage = 1, pageSize = 10 }: PaginationQueryDto): Promise<PaginationResult<SafeMedia>> {
+  async findAll({
+    currentPage = 1,
+    pageSize = 10,
+  }: PaginationQueryDto): Promise<PaginationResult<SafeMedia>> {
+    
     const skip = (currentPage - 1) * pageSize;
-
+    
     const [data, total] = await Promise.all([
       this.prisma.media.findMany({
         skip,
         take: pageSize,
-        orderBy: { createdAt: 'desc' },
-        include: { content: true },
+        orderBy: { createdAt: 'asc' },
+        include: {
+          content: {
+            select: { id: true, title: true },
+          },
+        },
       }),
       this.prisma.media.count(),
     ]);
-
+    
     return {
       data,
       meta: getPaginationMeta(total, currentPage, pageSize),
@@ -143,7 +159,6 @@ export class MediaService implements OnModuleInit {
         );
       } catch (error) {
         console.warn(`Gagal hapus dari R2: ${key}`, error);
-        // Tetap lanjut hapus dari DB
       }
     }
 
