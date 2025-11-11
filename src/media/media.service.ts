@@ -142,24 +142,32 @@ export class MediaService implements OnModuleInit {
 
   // 5. HAPUS DARI R2 + DB
   async remove(id: number) {
-    const media = await this.prisma.media.findUnique({ where: { id } });
-    if (!media) {
-      throw new NotFoundException(`Media dengan ID ${id} tidak ditemukan`);
-    }
+  const media = await this.prisma.media.findUnique({ where: { id } });
+  if (!media) {
+    throw new NotFoundException(`Media dengan ID ${id} tidak ditemukan`);
+  }
 
-    // Hapus dari R2
-    if (media.url) {
-      const key = media.url.replace(`${this.publicUrl}/`, '');
-      try {
-        await this.r2.send(
-          new DeleteObjectCommand({
-            Bucket: this.bucketName,
-            Key: key,
-          }),
-        );
-      } catch (error) {
-        console.warn(`Gagal hapus dari R2: ${key}`, error);
+  // Hapus dari R2
+  if (media.url) {
+    try {
+      if (!this.publicUrl) {
+        throw new Error("R2_PUBLIC_URL is not configured in environment variables.");
       }
+
+      const urlObj = new URL(media.url);
+      const key = urlObj.pathname.replace(/^\/+/, "");
+
+      await this.r2.send(
+        new DeleteObjectCommand({
+          Bucket: this.bucketName,
+          Key: key,
+        }),
+      );
+
+      console.log(`✅ Deleted from R2: ${key}`);
+    } catch (error) {
+      console.warn(`⚠️ Gagal hapus dari R2: ${media.url}`, error);
+    }
     }
 
     await this.prisma.media.delete({ where: { id } });
@@ -169,4 +177,5 @@ export class MediaService implements OnModuleInit {
       deletedUrl: media.url,
     };
   }
+
 }
