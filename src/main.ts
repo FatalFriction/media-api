@@ -13,6 +13,7 @@ async function createApp() {
   origin: [
     'https://michael-porto-api.vercel.app',
     'https://swagger-ui-sepia.vercel.app',
+    'http://localhost:5173',
   ],
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   allowedHeaders: 'Content-Type, Authorization, Accept',
