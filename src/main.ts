@@ -12,7 +12,7 @@ async function createApp() {
   app.enableCors({
   origin: [
     'https://michael-porto-api.vercel.app',
-    'swagger-ui-sepia.vercel.app',
+    'https://swagger-ui-sepia.vercel.app',
   ],
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   allowedHeaders: 'Content-Type, Authorization, Accept',
