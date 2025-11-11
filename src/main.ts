@@ -9,7 +9,14 @@ let cachedApp: any;
 
 async function createApp() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  app.enableCors({
+  origin: [
+    'https://michael-porto-api.vercel.app',
+    'swagger-ui-sepia.vercel.app',
+  ],
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+  allowedHeaders: 'Content-Type, Authorization, Accept',
+});
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
