@@ -1,5 +1,6 @@
+import { Injectable, NotFoundException, forwardRef, Inject } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { Injectable } from '@nestjs/common';
+import { MediaService } from '../media/media.service'; // ⬅️ Import your MediaService
 import { ContentEntity } from './Entities/Content.entities';
 import { UserEntity } from 'src/users/Entities/Users.entities';
 import { CategoryEntity } from 'src/category/Entities/Category.entities';
@@ -23,8 +24,13 @@ type SafeContent = Pick<
 
 @Injectable()
 export class ContentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => MediaService)) // ⬅️ Prevent circular dependency issues
+    private readonly mediaService: MediaService,
+  ) {}
 
+  // 🧩 PAGINATED FETCH
   async findAll({
     currentPage = 1,
     pageSize = 10,
@@ -69,7 +75,8 @@ export class ContentsService {
     };
   }
 
-  create(data: {
+  // 🧩 CREATE CONTENT
+  async create(data: {
     title: string;
     slug: string;
     body: string;
@@ -79,13 +86,54 @@ export class ContentsService {
     return this.prisma.content.create({ data });
   }
 
-  findOne(id: number) {
-    return this.prisma.content.findUnique({ where: { id } });
+  // 🧩 FIND ONE
+  async findOne(id: number) {
+    const content = await this.prisma.content.findUnique({
+      where: { id },
+      include: { media: true },
+    });
+
+    if (!content) {
+      throw new NotFoundException(`Content with ID ${id} not found`);
+    }
+
+    return content;
   }
-  update(id: number, data: any) {
+
+  // 🧩 UPDATE CONTENT
+  async update(id: number, data: any) {
+    const content = await this.prisma.content.findUnique({ where: { id } });
+    if (!content) {
+      throw new NotFoundException(`Content with ID ${id} not found`);
+    }
+
     return this.prisma.content.update({ where: { id }, data });
   }
-  remove(id: number) {
-    return this.prisma.content.delete({ where: { id } });
+
+  // 🧩 DELETE CONTENT + RELATED MEDIA IN R2
+  async remove(id: number) {
+    const content = await this.prisma.content.findUnique({
+      where: { id },
+      include: { media: true },
+    });
+
+    if (!content) {
+      throw new NotFoundException(`Content with ID ${id} not found`);
+    }
+
+    // Delete all associated media files from R2 + DB
+    for (const media of content.media) {
+      try {
+        await this.mediaService.remove(media.id);
+      } catch (error) {
+        console.warn(`Failed to delete media ${media.id} from R2`, error);
+      }
+    }
+
+    await this.prisma.content.delete({ where: { id } });
+
+    return {
+      message: `Content ${id} and ${content.media.length} related media deleted successfully`,
+    };
   }
 }
