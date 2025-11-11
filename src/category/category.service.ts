@@ -18,6 +18,8 @@ export class CategoryService {
 
     const [data, total] = await Promise.all([
     this.prisma.category.findMany({
+      skip,
+      take: limit,
       orderBy: { id: 'asc' },
       include: { contents: true },
     }),
