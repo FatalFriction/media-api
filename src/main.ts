@@ -2,104 +2,85 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import * as express from 'express';
-import * as path from 'path';
 
 let cachedApp: any;
 
+/**
+ * Create and initialize the NestJS app (used both in local and Vercel)
+ */
 async function createApp() {
   const app = await NestFactory.create(AppModule);
+
+  // Enable CORS for frontend requests
   app.enableCors();
+
+  // Enable global validation pipes
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
       whitelist: true,
-      forbidNonWhitelisted: false,
       transformOptions: {
         enableImplicitConversion: true,
       },
     }),
   );
 
+  // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('Michael Porto API')
     .setDescription('Portfolio CMS + Auth + Cloudflare R2')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
+
   const document = SwaggerModule.createDocument(app, config);
 
-  const server = app.getHttpAdapter().getInstance();
-  
-  const swaggerPath = path.join(__dirname, '..', 'swagger-static');
-  server.use('/api', express.static(swaggerPath));
+  // ✅ Use '/docs' instead of '/api' to avoid route conflicts
+  SwaggerModule.setup('docs', app, document);
 
-  // Swagger UI dengan CDN
-  server.get('/api', (req: any, res: any) => {
-    res.send(`
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <title>Michael Porto API</title>
-        <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
-        <style>
-          body { margin: 0; padding: 0; background: #0f172a; }
-          .swagger-ui .topbar { background: #1e293b; }
-          .swagger-ui .topbar .download-url-wrapper { display: none; }
-        </style>
-      </head>
-      <body>
-        <div id="swagger-ui"></div>
-        <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-        <script>
-          window.onload = () => {
-            window.ui = SwaggerUIBundle({
-              spec: ${JSON.stringify(document)},
-              dom_id: '#swagger-ui',
-              presets: [SwaggerUIBundle.presets.apis],
-              layout: "BaseLayout"
-            });
-          };
-        </script>
-      </body>
-      </html>
-    `);
-  });
-
+  // Initialize the app (do not listen — required for Vercel)
   await app.init();
-  return server;
+
+  // ✅ Return the underlying HTTP handler (Express instance)
+  return app.getHttpAdapter().getInstance();
 }
 
+/**
+ * Vercel serverless entry point
+ */
 export default async function handler(req: any, res: any) {
   if (!cachedApp) cachedApp = await createApp();
   return cachedApp(req, res);
 }
 
-// Local dev
+/**
+ * Local development mode — runs on port 3000
+ */
 if (process.env.NODE_ENV !== 'production') {
   (async () => {
     const app = await NestFactory.create(AppModule);
     app.enableCors();
     app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      forbidNonWhitelisted: false,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-    }),
-  );
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        transformOptions: {
+          enableImplicitConversion: true,
+        },
+      }),
+    );
+
     const config = new DocumentBuilder()
       .setTitle('Michael Porto API')
-      .setDescription('Local dev')
+      .setDescription('Local development')
       .setVersion('1.0')
       .addBearerAuth()
       .build();
+
     const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api', app, document);
+    SwaggerModule.setup('docs', app, document);
+
     await app.listen(3000);
-    console.log('Swagger: http://localhost:3000/api');
+    console.log('✅ Server running at: http://localhost:3000/docs');
   })();
 }
